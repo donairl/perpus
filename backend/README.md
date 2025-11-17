@@ -4,30 +4,25 @@ FastAPI backend with SQLAlchemy for the library management system.
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Activate Virtual Environment
+
+The project uses a virtual environment located at `~/venv`. Activate it:
 
 ```bash
+source ~/venv/bin/activate
 cd backend
-pip install -r requirements.txt
-```
-
-Or use a virtual environment:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
 ```
 
 ### 2. Seed Database
 
 ```bash
-python seed_data.py
+python -m app.seed_data
 ```
 
 This creates:
 - SQLite database with sample books and members
 - Admin user (username: `admin`, password: `admin123`)
+- Librarian user (username: `librarian`, password: `lib123`)
 
 ### 3. Run Server
 
