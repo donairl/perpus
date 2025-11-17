@@ -32,6 +32,29 @@ const getHeaders = () => {
   return headers
 }
 
+export type BookStatus = 'available' | 'borrowed' | 'reserved'
+
+export interface Book {
+  id: number
+  title: string
+  author: string
+  isbn: string
+  category: string
+  status: BookStatus
+  copies: number
+  created_at?: string
+  updated_at?: string | null
+}
+
+export interface NewBookRequest {
+  title: string
+  author: string
+  isbn: string
+  category: string
+  copies: number
+  status?: BookStatus
+}
+
 // Auth API
 export const login = async (username: string, password: string) => {
   const formData = new URLSearchParams()
@@ -56,7 +79,9 @@ export const login = async (username: string, password: string) => {
 }
 
 // Books API
-export const getBooks = async (params?: { category?: string; status?: string; search?: string }) => {
+export const getBooks = async (
+  params?: { category?: string; status?: string; search?: string }
+): Promise<Book[]> => {
   const queryParams = new URLSearchParams()
   if (params?.category) queryParams.append('category', params.category)
   if (params?.status) queryParams.append('status', params.status)
@@ -70,6 +95,21 @@ export const getBooks = async (params?: { category?: string; status?: string; se
     throw new Error('Failed to fetch books')
   }
   
+  return response.json()
+}
+
+export const createBook = async (book: NewBookRequest): Promise<Book> => {
+  const response = await fetch(`${API_BASE_URL}/api/books`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(book),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || 'Failed to create book')
+  }
+
   return response.json()
 }
 

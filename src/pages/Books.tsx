@@ -1,18 +1,11 @@
 import { useState, useEffect } from 'react'
 import './Books.css'
+import AddBookModal from '../components/AddBookModal'
 import BorrowBookModal from '../components/BorrowBookModal'
 import ReturnBookModal from '../components/ReturnBookModal'
 import * as api from '../services/api'
 
-interface Book {
-  id: number
-  title: string
-  author: string
-  isbn: string
-  category: string
-  status: 'available' | 'borrowed' | 'reserved'
-  copies: number
-}
+type Book = api.Book
 
 function Books() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -30,6 +23,7 @@ function Books() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [showBorrowModal, setShowBorrowModal] = useState(false)
   const [showReturnModal, setShowReturnModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const loadBooks = async () => {
     try {
@@ -45,6 +39,15 @@ function Books() {
   useEffect(() => {
     loadBooks()
   }, [])
+
+  const handleAddBook = async (newBook: api.NewBookRequest) => {
+    try {
+      await api.createBook(newBook)
+      await loadBooks()
+    } catch (error: any) {
+      throw new Error(error?.message || 'Failed to add book')
+    }
+  }
 
   const handleBorrow = async (bookId: number, memberId: number, dueDays: number) => {
     try {
@@ -95,7 +98,8 @@ function Books() {
     setShowReturnModal(true)
   }
 
-  const categories = ['all', ...Array.from(new Set(books.map(book => book.category)))]
+  const categoryOptions = Array.from(new Set(books.map(book => book.category).filter(Boolean)))
+  const categories = ['all', ...categoryOptions]
 
   const filteredBooks = books.filter(book => {
     const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,7 +116,7 @@ function Books() {
           <h1>Book Collection</h1>
           <p>Manage and browse your library's book inventory</p>
         </div>
-        <button className="add-book-button">
+        <button className="add-book-button" onClick={() => setShowAddModal(true)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -218,6 +222,14 @@ function Books() {
           book={selectedBook}
           onClose={() => setShowReturnModal(false)}
           onReturn={handleReturn}
+        />
+      )}
+
+      {showAddModal && (
+        <AddBookModal
+          onClose={() => setShowAddModal(false)}
+          onCreate={handleAddBook}
+          categories={categoryOptions}
         />
       )}
     </div>

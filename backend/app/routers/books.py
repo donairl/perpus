@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -45,7 +45,7 @@ def get_book(
         raise HTTPException(status_code=404, detail="Book not found")
     return book
 
-@router.post("/", response_model=schemas.Book)
+@router.post("/", response_model=schemas.Book, status_code=status.HTTP_201_CREATED)
 def create_book(
     book: schemas.BookCreate,
     db: Session = Depends(get_db),
