@@ -1,0 +1,152 @@
+export const API_BASE_URL = 'http://localhost:8000'
+
+let authToken: string | null = null
+
+export const setAuthToken = (token: string) => {
+  authToken = token
+  localStorage.setItem('authToken', token)
+}
+
+export const getAuthToken = () => {
+  if (!authToken) {
+    authToken = localStorage.getItem('authToken')
+  }
+  return authToken
+}
+
+export const clearAuthToken = () => {
+  authToken = null
+  localStorage.removeItem('authToken')
+}
+
+const getHeaders = () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  
+  const token = getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
+  return headers
+}
+
+// Auth API
+export const login = async (username: string, password: string) => {
+  const formData = new URLSearchParams()
+  formData.append('username', username)
+  formData.append('password', password)
+  
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    throw new Error('Login failed')
+  }
+  
+  const data = await response.json()
+  setAuthToken(data.access_token)
+  return data
+}
+
+// Books API
+export const getBooks = async (params?: { category?: string; status?: string; search?: string }) => {
+  const queryParams = new URLSearchParams()
+  if (params?.category) queryParams.append('category', params.category)
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.search) queryParams.append('search', params.search)
+  
+  const response = await fetch(`${API_BASE_URL}/api/books?${queryParams}`, {
+    headers: getHeaders(),
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch books')
+  }
+  
+  return response.json()
+}
+
+// Transactions API
+export const borrowBook = async (bookId: number, memberId: number, dueDays: number = 14) => {
+  const response = await fetch(`${API_BASE_URL}/api/transactions/borrow`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      book_id: bookId,
+      member_id: memberId,
+      due_days: dueDays,
+    }),
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to borrow book')
+  }
+  
+  return response.json()
+}
+
+export const returnBook = async (bookId: number, memberId: number) => {
+  const response = await fetch(`${API_BASE_URL}/api/transactions/return`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      book_id: bookId,
+      member_id: memberId,
+    }),
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to return book')
+  }
+  
+  return response.json()
+}
+
+export const getTransactions = async (params?: { book_id?: number; member_id?: number }) => {
+  const queryParams = new URLSearchParams()
+  if (params?.book_id) queryParams.append('book_id', params.book_id.toString())
+  if (params?.member_id) queryParams.append('member_id', params.member_id.toString())
+  
+  const response = await fetch(`${API_BASE_URL}/api/transactions?${queryParams}`, {
+    headers: getHeaders(),
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch transactions')
+  }
+  
+  return response.json()
+}
+
+export const getActiveBorrows = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/transactions/active-borrows`, {
+    headers: getHeaders(),
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch active borrows')
+  }
+  
+  return response.json()
+}
+
+export const checkApiHealth = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/health`, {
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) {
+    throw new Error('API health check failed')
+  }
+
+  return response.json()
+}
