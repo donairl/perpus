@@ -23,13 +23,30 @@ const getHeaders = () => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
-  
+
   const token = getAuthToken()
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  
+
   return headers
+}
+
+// Helper function to handle API responses and token expiration
+const handleApiResponse = async (response: Response) => {
+  if (response.status === 401) {
+    // Token expired or invalid - clear it and redirect to login
+    clearAuthToken()
+    window.location.href = '/login'
+    throw new Error('Authentication expired. Please login again.')
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || `HTTP ${response.status}: ${response.statusText}`)
+  }
+
+  return response
 }
 
 export type BookStatus = 'available' | 'borrowed' | 'reserved'
@@ -138,11 +155,7 @@ export const createBook = async (book: NewBookRequest): Promise<Book> => {
     body: JSON.stringify(book),
   })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => null)
-    throw new Error(error?.detail || 'Failed to create book')
-  }
-
+  await handleApiResponse(response)
   return response.json()
 }
 
@@ -185,11 +198,7 @@ export const createMember = async (member: NewMemberRequest): Promise<Member> =>
     body: JSON.stringify(member),
   })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => null)
-    throw new Error(error?.detail || 'Failed to create member')
-  }
-
+  await handleApiResponse(response)
   return response.json()
 }
 
@@ -308,4 +317,15 @@ export const checkApiHealth = async () => {
   }
 
   return response.json()
+}
+
+export const checkAuthStatus = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: getHeaders(),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
 }
