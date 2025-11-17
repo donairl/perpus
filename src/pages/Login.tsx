@@ -141,7 +141,7 @@ function Login({ onLogin }: LoginProps) {
         </form>
 
         <div className="login-footer">
-          <p>Demo: Use any username and password to login</p>
+          <p>Demo credentials: admin / admin123 or librarian / lib123</p>
         </div>
       </div>
 
