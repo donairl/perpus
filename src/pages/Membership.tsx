@@ -1,28 +1,83 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Membership.css'
+import AddMemberModal from '../components/AddMemberModal'
+import EditMemberModal from '../components/EditMemberModal'
+import * as api from '../services/api'
 
-interface Member {
-  id: number
-  name: string
-  email: string
-  phone: string
-  membershipType: 'Basic' | 'Premium' | 'VIP'
-  joinDate: string
-  status: 'active' | 'inactive' | 'expired'
-  booksCount: number
-}
+type Member = api.Member
 
 function Membership() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  const [members] = useState<Member[]>([
-    { id: 1, name: 'John Doe', email: 'john@example.com', phone: '(555) 123-4567', membershipType: 'Premium', joinDate: '2023-01-15', status: 'active', booksCount: 3 },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', phone: '(555) 234-5678', membershipType: 'VIP', joinDate: '2023-02-20', status: 'active', booksCount: 5 },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', phone: '(555) 345-6789', membershipType: 'Basic', joinDate: '2023-03-10', status: 'active', booksCount: 1 },
-    { id: 4, name: 'Alice Williams', email: 'alice@example.com', phone: '(555) 456-7890', membershipType: 'Premium', joinDate: '2023-04-05', status: 'active', booksCount: 2 },
-    { id: 5, name: 'Charlie Brown', email: 'charlie@example.com', phone: '(555) 567-8901', membershipType: 'Basic', joinDate: '2022-12-01', status: 'expired', booksCount: 0 },
-    { id: 6, name: 'Diana Prince', email: 'diana@example.com', phone: '(555) 678-9012', membershipType: 'VIP', joinDate: '2023-05-12', status: 'active', booksCount: 4 },
-  ])
+  const [members, setMembers] = useState<Member[]>([])
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    expired: 0,
+  })
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const loadMembers = async () => {
+    try {
+      const [membersData, statsData] = await Promise.all([
+        api.getMembers(),
+        api.getMembersStats(),
+      ])
+      setMembers(membersData)
+      setStats({
+        total: statsData.total_members,
+        active: statsData.active,
+        expired: statsData.expired,
+      })
+    } catch (error) {
+      console.error('Failed to load members:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMembers()
+  }, [])
+
+  const handleAddMember = async (newMember: api.NewMemberRequest) => {
+    try {
+      await api.createMember(newMember)
+      await loadMembers()
+    } catch (error: any) {
+      throw new Error(error?.message || 'Failed to add member')
+    }
+  }
+
+  const handleUpdateMember = async (memberId: number, updatedMember: api.UpdateMemberRequest) => {
+    try {
+      await api.updateMember(memberId, updatedMember)
+      await loadMembers()
+    } catch (error: any) {
+      throw new Error(error?.message || 'Failed to update member')
+    }
+  }
+
+  const handleDeleteMember = async (memberId: number) => {
+    if (!window.confirm('Are you sure you want to delete this member? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      await api.deleteMember(memberId)
+      await loadMembers()
+    } catch (error: any) {
+      alert(`Failed to delete member: ${error.message}`)
+    }
+  }
+
+  const openEditModal = (member: Member) => {
+    setSelectedMember(member)
+    setShowEditModal(true)
+  }
 
   const filteredMembers = members.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,12 +86,6 @@ function Membership() {
     return matchesSearch && matchesStatus
   })
 
-  const stats = {
-    total: members.length,
-    active: members.filter(m => m.status === 'active').length,
-    expired: members.filter(m => m.status === 'expired').length,
-  }
-
   return (
     <div className="membership-page">
       <div className="membership-header">
@@ -44,7 +93,7 @@ function Membership() {
           <h1>Membership Management</h1>
           <p>Manage library members and their subscriptions</p>
         </div>
-        <button className="add-member-button">
+        <button className="add-member-button" onClick={() => setShowAddModal(true)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -105,6 +154,15 @@ function Membership() {
       </div>
 
       <div className="members-table">
+        {isLoading ? (
+          <div className="loading-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6V12L16 14" />
+            </svg>
+            <h3>Loading members...</h3>
+          </div>
+        ) : (
         <table>
           <thead>
             <tr>
@@ -138,13 +196,13 @@ function Membership() {
                   </div>
                 </td>
                 <td>
-                  <span className={`membership-badge ${member.membershipType.toLowerCase()}`}>
-                    {member.membershipType}
+                  <span className={`membership-badge ${member.membership_type.toLowerCase()}`}>
+                    {member.membership_type}
                   </span>
                 </td>
-                <td>{new Date(member.joinDate).toLocaleDateString()}</td>
+                <td>{new Date(member.join_date).toLocaleDateString()}</td>
                 <td>
-                  <span className="books-count">{member.booksCount} {member.booksCount === 1 ? 'book' : 'books'}</span>
+                  <span className="books-count">{member.books_count} {member.books_count === 1 ? 'book' : 'books'}</span>
                 </td>
                 <td>
                   <span className={`status-badge ${member.status}`}>
@@ -159,13 +217,13 @@ function Membership() {
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     </button>
-                    <button className="icon-button" title="Edit">
+                    <button className="icon-button" title="Edit" onClick={() => openEditModal(member)}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                     </button>
-                    <button className="icon-button" title="Delete">
+                    <button className="icon-button" title="Delete" onClick={() => handleDeleteMember(member.id)}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -177,8 +235,9 @@ function Membership() {
             ))}
           </tbody>
         </table>
+        )}
 
-        {filteredMembers.length === 0 && (
+        {filteredMembers.length === 0 && !isLoading && (
           <div className="no-results">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -191,6 +250,21 @@ function Membership() {
           </div>
         )}
       </div>
+
+      {showAddModal && (
+        <AddMemberModal
+          onClose={() => setShowAddModal(false)}
+          onCreate={handleAddMember}
+        />
+      )}
+
+      {showEditModal && selectedMember && (
+        <EditMemberModal
+          member={selectedMember}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdateMember}
+        />
+      )}
     </div>
   )
 }

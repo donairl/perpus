@@ -55,6 +55,39 @@ export interface NewBookRequest {
   status?: BookStatus
 }
 
+export type MemberStatus = 'active' | 'inactive' | 'expired'
+export type MembershipType = 'Basic' | 'Premium' | 'VIP'
+
+export interface Member {
+  id: number
+  name: string
+  email: string
+  phone: string
+  membership_type: MembershipType
+  status: MemberStatus
+  books_count: number
+  join_date: string
+  created_at?: string
+  updated_at?: string | null
+}
+
+export interface NewMemberRequest {
+  name: string
+  email: string
+  phone: string
+  membership_type?: MembershipType
+  status?: MemberStatus
+}
+
+export interface UpdateMemberRequest {
+  name?: string
+  email?: string
+  phone?: string
+  membership_type?: MembershipType
+  status?: MemberStatus
+  books_count?: number
+}
+
 // Auth API
 export const login = async (username: string, password: string) => {
   const formData = new URLSearchParams()
@@ -108,6 +141,92 @@ export const createBook = async (book: NewBookRequest): Promise<Book> => {
   if (!response.ok) {
     const error = await response.json().catch(() => null)
     throw new Error(error?.detail || 'Failed to create book')
+  }
+
+  return response.json()
+}
+
+// Members API
+export const getMembers = async (
+  params?: { status?: string; search?: string }
+): Promise<Member[]> => {
+  const queryParams = new URLSearchParams()
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.search) queryParams.append('search', params.search)
+
+  const response = await fetch(`${API_BASE_URL}/api/members?${queryParams}`, {
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch members')
+  }
+
+  return response.json()
+}
+
+export const getMember = async (memberId: number): Promise<Member> => {
+  const response = await fetch(`${API_BASE_URL}/api/members/${memberId}`, {
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || 'Failed to fetch member')
+  }
+
+  return response.json()
+}
+
+export const createMember = async (member: NewMemberRequest): Promise<Member> => {
+  const response = await fetch(`${API_BASE_URL}/api/members`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(member),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || 'Failed to create member')
+  }
+
+  return response.json()
+}
+
+export const updateMember = async (memberId: number, member: UpdateMemberRequest): Promise<Member> => {
+  const response = await fetch(`${API_BASE_URL}/api/members/${memberId}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(member),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || 'Failed to update member')
+  }
+
+  return response.json()
+}
+
+export const deleteMember = async (memberId: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/members/${memberId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.detail || 'Failed to delete member')
+  }
+}
+
+export const getMembersStats = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/members/stats/summary`, {
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch members stats')
   }
 
   return response.json()
