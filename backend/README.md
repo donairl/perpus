@@ -125,7 +125,7 @@ Authorization: Bearer <your_token>
 
 - **FastAPI** - Modern web framework
 - **SQLAlchemy** - ORM
-- **SQLite** - Database
+- **SQLite / PostgreSQL** - Database (configurable via `DATABASE_URL`)
 - **Pydantic** - Data validation
 - **python-jose** - JWT tokens
 - **passlib** - Password hashing
