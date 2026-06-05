@@ -4,19 +4,31 @@ FastAPI backend with SQLAlchemy for the library management system.
 
 ## Setup
 
-### 1. Activate Virtual Environment
+### 1. Install Dependencies with uv
 
-The project uses a virtual environment located at `~/venv`. Activate it:
+Install [uv](https://docs.astral.sh/uv/) if you haven't already:
 
 ```bash
-source ~/venv/bin/activate
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then install project dependencies:
+
+```bash
 cd backend
+uv pip install -r requirements.txt
+```
+
+Or sync all dependencies in one step:
+
+```bash
+uv sync
 ```
 
 ### 2. Seed Database
 
 ```bash
-python -m app.seed_data
+uv run python -m app.seed_data
 ```
 
 This creates:
@@ -27,10 +39,45 @@ This creates:
 ### 3. Run Server
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API will be available at `http://localhost:8000`
+
+## Database Configuration
+
+The app reads `DATABASE_URL` from `backend/.env`. SQLite is the default — no setup needed.
+
+### SQLite (default)
+
+```env
+DATABASE_URL=sqlite:///./perpus.db
+```
+
+### PostgreSQL
+
+1. Create a PostgreSQL database:
+   ```bash
+   createdb perpus
+   ```
+
+2. Set the connection URL in `backend/.env`:
+   ```env
+   DATABASE_URL=postgresql://user:password@localhost:5432/perpus
+   ```
+
+3. Reinstall dependencies (includes `psycopg2-binary`):
+   ```bash
+   uv pip install -r requirements.txt
+   ```
+
+4. Seed the database and start the server as normal:
+   ```bash
+   uv run python -m app.seed_data
+   uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+Tables are created automatically on first run via SQLAlchemy — no migration step needed.
 
 ## API Endpoints
 
@@ -55,6 +102,11 @@ API will be available at `http://localhost:8000`
 - `DELETE /api/members/{id}` - Delete member
 - `GET /api/members/stats/summary` - Get member statistics
 
+### Borrows
+- `GET /api/borrows/` - List all borrow records
+- `POST /api/borrows/` - Create borrow record
+- `PUT /api/borrows/{id}/return` - Return a book
+
 ### Documentation
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
@@ -77,3 +129,4 @@ Authorization: Bearer <your_token>
 - **Pydantic** - Data validation
 - **python-jose** - JWT tokens
 - **passlib** - Password hashing
+- **uv** - Fast Python package manager
