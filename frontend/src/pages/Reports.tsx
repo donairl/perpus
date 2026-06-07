@@ -43,7 +43,7 @@ function Reports() {
   return (
     <div className="reports-page">
       <div className="reports-header">
-        <h1>Laporan Peminjaman</h1>
+        <h1>Statistik Peminjaman</h1>
         <div className="filter-bar">
           <label>
             Dari:

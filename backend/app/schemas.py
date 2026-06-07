@@ -1,14 +1,27 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
-from app.models import BookStatus, MembershipType, MemberStatus, TransactionType
+from typing import Optional, List
+from app.models import BookStatus, MembershipType, MemberStatus, TransactionType, FineType, FineStatus
 
 # Book schemas
+class CategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class BookBase(BaseModel):
     title: str
     author: str
     isbn: str
-    category: str
+    category_id: Optional[int] = None
     status: BookStatus = BookStatus.AVAILABLE
     copies: int = 1
 
@@ -19,12 +32,13 @@ class BookUpdate(BaseModel):
     title: Optional[str] = None
     author: Optional[str] = None
     isbn: Optional[str] = None
-    category: Optional[str] = None
+    category_id: Optional[int] = None
     status: Optional[BookStatus] = None
     copies: Optional[int] = None
 
 class Book(BookBase):
     id: int
+    category: str = ""
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -89,9 +103,32 @@ class BorrowBookRequest(BaseModel):
     member_id: int
     due_days: int = 14  # Default 14 days
 
+class BorrowBatchRequest(BaseModel):
+    member_id: int
+    book_ids: List[int]
+    due_days: int = 14
+
 class ReturnBookRequest(BaseModel):
     book_id: int
     member_id: int
+
+class FineCreate(BaseModel):
+    member_id: int
+    book_id: Optional[int] = None
+    fine_type: FineType
+    amount: float
+    reason: Optional[str] = None
+
+class SettingResponse(BaseModel):
+    key: str
+    value: str
+    label: str
+
+    class Config:
+        from_attributes = True
+
+class SettingUpdate(BaseModel):
+    value: str
 
 class Transaction(BaseModel):
     id: int

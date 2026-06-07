@@ -57,6 +57,7 @@ export interface Book {
   author: string
   isbn: string
   category: string
+  category_id?: number
   status: BookStatus
   copies: number
   created_at?: string
@@ -67,7 +68,7 @@ export interface NewBookRequest {
   title: string
   author: string
   isbn: string
-  category: string
+  category_id: number
   copies: number
   status?: BookStatus
 }
@@ -242,6 +243,16 @@ export const getMembersStats = async () => {
 }
 
 // Transactions API
+export const borrowBatch = async (memberId: number, bookIds: number[], dueDays: number = 14) => {
+  const response = await fetch(`${API_BASE_URL}/api/transactions/borrow-batch`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ member_id: memberId, book_ids: bookIds, due_days: dueDays }),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
 export const borrowBook = async (bookId: number, memberId: number, dueDays: number = 14) => {
   const response = await fetch(`${API_BASE_URL}/api/transactions/borrow`, {
     method: 'POST',
@@ -363,6 +374,29 @@ export const getTopBooks = async (params?: {
   return response.json()
 }
 
+export interface OverdueBorrow {
+  transaction_id: number
+  member_id: number
+  member_name: string
+  member_email: string
+  member_phone: string
+  membership_type: string
+  book_id: number
+  book_title: string
+  book_author: string
+  borrow_date: string
+  due_date: string
+  days_overdue: number
+}
+
+export const getOverdueReport = async (): Promise<OverdueBorrow[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/reports/overdue`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
 export const getTopMembers = async (params?: {
   start_date?: string
   end_date?: string
@@ -378,4 +412,155 @@ export const getTopMembers = async (params?: {
   })
   await handleApiResponse(response)
   return response.json()
+}
+
+// Settings API
+export interface AppSetting {
+  key: string
+  value: string
+  label: string
+}
+
+export const getSettings = async (): Promise<AppSetting[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/settings`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const updateSetting = async (key: string, value: string): Promise<AppSetting> => {
+  const response = await fetch(`${API_BASE_URL}/api/settings/${key}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({ value }),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+// Fines API
+export type FineType = 'late' | 'lost' | 'damage'
+export type FineStatus = 'unpaid' | 'paid'
+
+export interface Fine {
+  id: number
+  member_id: number
+  book_id: number | null
+  transaction_id: number | null
+  fine_type: FineType
+  amount: number
+  status: FineStatus
+  reason: string | null
+  paid_at: string | null
+  created_at: string
+  member_name: string
+  book_title: string | null
+}
+
+export interface FineSummary {
+  total_unpaid: number
+  amount_unpaid: number
+  total_paid: number
+  amount_paid: number
+}
+
+export interface FineCreateRequest {
+  member_id: number
+  book_id?: number
+  fine_type: 'lost' | 'damage'
+  amount: number
+  reason?: string
+}
+
+export const getFines = async (params?: {
+  status?: string
+  member_id?: number
+  fine_type?: string
+}): Promise<Fine[]> => {
+  const queryParams = new URLSearchParams()
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.member_id) queryParams.append('member_id', params.member_id.toString())
+  if (params?.fine_type) queryParams.append('fine_type', params.fine_type)
+  const response = await fetch(`${API_BASE_URL}/api/fines?${queryParams}`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const createFine = async (data: FineCreateRequest): Promise<{ id: number; message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/fines`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const payFine = async (fineId: number): Promise<{ id: number; message: string; paid_at: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/fines/${fineId}/pay`, {
+    method: 'PUT',
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const getFineSummary = async (): Promise<FineSummary> => {
+  const response = await fetch(`${API_BASE_URL}/api/fines/summary`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+// Categories API
+export interface Category {
+  id: number
+  name: string
+  description: string | null
+  created_at: string
+}
+
+export interface CategoryCreateRequest {
+  name: string
+  description?: string
+}
+
+export const getCategories = async (): Promise<Category[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/categories`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const createCategory = async (data: CategoryCreateRequest): Promise<Category> => {
+  const response = await fetch(`${API_BASE_URL}/api/categories`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const updateCategory = async (id: number, data: CategoryCreateRequest): Promise<Category> => {
+  const response = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const deleteCategory = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
 }

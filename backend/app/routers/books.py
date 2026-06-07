@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.database import get_db
 from app import models, schemas, auth
@@ -11,15 +11,18 @@ def get_books(
     skip: int = 0,
     limit: int = 100,
     category: str = None,
+    category_id: int = None,
     status: str = None,
     search: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    query = db.query(models.Book)
-    
-    if category:
-        query = query.filter(models.Book.category == category)
+    query = db.query(models.Book).options(joinedload(models.Book.category_rel))
+
+    if category_id:
+        query = query.filter(models.Book.category_id == category_id)
+    elif category:
+        query = query.join(models.Category).filter(models.Category.name == category)
     
     if status:
         query = query.filter(models.Book.status == status)
@@ -40,7 +43,7 @@ def get_book(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    book = db.query(models.Book).filter(models.Book.id == book_id).first()
+    book = db.query(models.Book).options(joinedload(models.Book.category_rel)).filter(models.Book.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return book

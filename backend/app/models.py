@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -20,6 +20,14 @@ class MemberStatus(str, enum.Enum):
     INACTIVE = "inactive"
     EXPIRED = "expired"
 
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
 class Book(Base):
     __tablename__ = "books"
 
@@ -27,11 +35,16 @@ class Book(Base):
     title = Column(String, nullable=False, index=True)
     author = Column(String, nullable=False, index=True)
     isbn = Column(String, unique=True, nullable=False, index=True)
-    category = Column(String, nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     status = Column(Enum(BookStatus), default=BookStatus.AVAILABLE)
     copies = Column(Integer, default=1)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    category_rel = relationship("Category")
+
+    @property
+    def category(self) -> str:
+        return self.category_rel.name if self.category_rel else ""
 
 class Member(Base):
     __tablename__ = "members"
@@ -61,6 +74,15 @@ class TransactionType(str, enum.Enum):
     BORROW = "borrow"
     RETURN = "return"
 
+class FineType(str, enum.Enum):
+    LATE = "late"
+    LOST = "lost"
+    DAMAGE = "damage"
+
+class FineStatus(str, enum.Enum):
+    UNPAID = "unpaid"
+    PAID = "paid"
+
 class Transaction(Base):
     __tablename__ = "transactions"
 
@@ -76,3 +98,29 @@ class Transaction(Base):
     # Relationships
     book = relationship("Book")
     member = relationship("Member")
+
+class Fine(Base):
+    __tablename__ = "fines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, ForeignKey('members.id'), nullable=False, index=True)
+    book_id = Column(Integer, ForeignKey('books.id'), nullable=True, index=True)
+    transaction_id = Column(Integer, ForeignKey('transactions.id'), nullable=True, index=True)
+    fine_type = Column(Enum(FineType), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(Enum(FineStatus), default=FineStatus.UNPAID)
+    reason = Column(String, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    member = relationship("Member")
+    book = relationship("Book")
+    transaction = relationship("Transaction")
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

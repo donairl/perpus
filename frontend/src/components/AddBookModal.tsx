@@ -1,13 +1,18 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import './BorrowBookModal.css'
 
 type BookStatusOption = 'available' | 'borrowed' | 'reserved'
+
+export interface CategoryOption {
+  id: number
+  name: string
+}
 
 export interface NewBookPayload {
   title: string
   author: string
   isbn: string
-  category: string
+  category_id: number
   copies: number
   status: BookStatusOption
 }
@@ -15,7 +20,7 @@ export interface NewBookPayload {
 interface AddBookModalProps {
   onClose: () => void
   onCreate: (book: NewBookPayload) => Promise<void>
-  categories: string[]
+  categories: CategoryOption[]
 }
 
 function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
@@ -23,23 +28,15 @@ function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
     title: '',
     author: '',
     isbn: '',
-    category: '',
+    category_id: '',
     copies: '1',
     status: 'available' as BookStatusOption,
   })
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const normalizedCategories = useMemo(
-    () => Array.from(new Set(categories.filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [categories]
-  )
-
   const handleChange = (field: keyof typeof formState, value: string) => {
-    setFormState((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    setFormState((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -49,9 +46,8 @@ function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
     const trimmedTitle = formState.title.trim()
     const trimmedAuthor = formState.author.trim()
     const trimmedIsbn = formState.isbn.trim()
-    const trimmedCategory = formState.category.trim()
 
-    if (!trimmedTitle || !trimmedAuthor || !trimmedIsbn || !trimmedCategory) {
+    if (!trimmedTitle || !trimmedAuthor || !trimmedIsbn || !formState.category_id) {
       setError('All fields are required')
       return
     }
@@ -68,19 +64,12 @@ function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
         title: trimmedTitle,
         author: trimmedAuthor,
         isbn: trimmedIsbn,
-        category: trimmedCategory,
+        category_id: Number(formState.category_id),
         copies: copiesValue,
         status: formState.status,
       })
       onClose()
-      setFormState({
-        title: '',
-        author: '',
-        isbn: '',
-        category: '',
-        copies: '1',
-        status: 'available',
-      })
+      setFormState({ title: '', author: '', isbn: '', category_id: '', copies: '1', status: 'available' })
     } catch (err: any) {
       setError(err.message || 'Failed to add book')
     } finally {
@@ -142,22 +131,17 @@ function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
 
             <div className="form-group">
               <label htmlFor="bookCategory">Category</label>
-              <input
+              <select
                 id="bookCategory"
-                type="text"
-                value={formState.category}
-                onChange={(event) => handleChange('category', event.target.value)}
-                placeholder="e.g. Software Engineering"
-                list="bookCategoryOptions"
+                value={formState.category_id}
+                onChange={(event) => handleChange('category_id', event.target.value)}
                 required
-              />
-              {normalizedCategories.length > 0 && (
-                <datalist id="bookCategoryOptions">
-                  {normalizedCategories.map((category) => (
-                    <option key={category} value={category} />
-                  ))}
-                </datalist>
-              )}
+              >
+                <option value="">-- Pilih Kategori --</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
@@ -203,4 +187,3 @@ function AddBookModal({ onClose, onCreate, categories }: AddBookModalProps) {
 }
 
 export default AddBookModal
-

@@ -18,7 +18,12 @@ def borrow_book(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    if book.status != models.BookStatus.AVAILABLE:
+    active_count = db.query(models.Transaction).filter(
+        models.Transaction.book_id == book.id,
+        models.Transaction.transaction_type == models.TransactionType.BORROW,
+        models.Transaction.return_date == None
+    ).count()
+    if active_count >= book.copies:
         raise HTTPException(status_code=400, detail="Book is not available")
     
     # Check if member exists
@@ -39,8 +44,8 @@ def borrow_book(
     )
     db.add(transaction)
     
-    # Update book status
-    book.status = models.BookStatus.BORROWED
+    if active_count + 1 >= book.copies:
+        book.status = models.BookStatus.BORROWED
     
     # Update member books count
     member.books_count += 1
@@ -52,6 +57,57 @@ def borrow_book(
         "message": "Book borrowed successfully",
         "transaction_id": transaction.id,
         "due_date": due_date.isoformat()
+    }
+
+@router.post("/borrow-batch")
+def borrow_books_batch(
+    request: schemas.BorrowBatchRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if not request.book_ids:
+        raise HTTPException(status_code=400, detail="Pilih minimal satu buku")
+
+    member = db.query(models.Member).filter(models.Member.id == request.member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member tidak ditemukan")
+    if member.status != models.MemberStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Member tidak aktif")
+
+    due_date = datetime.now(timezone.utc) + timedelta(days=request.due_days)
+    borrowed = []
+
+    for book_id in request.book_ids:
+        book = db.query(models.Book).filter(models.Book.id == book_id).first()
+        if not book:
+            raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
+        active_count = db.query(models.Transaction).filter(
+            models.Transaction.book_id == book_id,
+            models.Transaction.transaction_type == models.TransactionType.BORROW,
+            models.Transaction.return_date == None
+        ).count()
+        if active_count >= book.copies:
+            raise HTTPException(status_code=400, detail=f"Buku '{book.title}' tidak tersedia")
+
+        transaction = models.Transaction(
+            book_id=book_id,
+            member_id=request.member_id,
+            transaction_type=models.TransactionType.BORROW,
+            due_date=due_date,
+        )
+        db.add(transaction)
+        if active_count + 1 >= book.copies:
+            book.status = models.BookStatus.BORROWED
+        borrowed.append({"book_id": book_id, "title": book.title})
+
+    member.books_count += len(request.book_ids)
+    db.commit()
+
+    return {
+        "message": f"Berhasil meminjam {len(borrowed)} buku",
+        "member_id": request.member_id,
+        "due_date": due_date.isoformat(),
+        "borrowed": borrowed,
     }
 
 @router.post("/return")
@@ -92,8 +148,13 @@ def return_book(
     # Update borrow transaction with return date
     borrow_transaction.return_date = datetime.now(timezone.utc)
     
-    # Update book status to available
-    book.status = models.BookStatus.AVAILABLE
+    remaining = db.query(models.Transaction).filter(
+        models.Transaction.book_id == book.id,
+        models.Transaction.transaction_type == models.TransactionType.BORROW,
+        models.Transaction.return_date == None,
+        models.Transaction.id != borrow_transaction.id
+    ).count()
+    book.status = models.BookStatus.AVAILABLE if remaining == 0 else models.BookStatus.BORROWED
     
     # Update member books count
     if member.books_count > 0:
@@ -103,8 +164,27 @@ def return_book(
     db.refresh(return_transaction)
     
     # Check if returned late
-    is_late = datetime.now(timezone.utc) > borrow_transaction.due_date if borrow_transaction.due_date else False
-    
+    is_late = datetime.utcnow() > borrow_transaction.due_date if borrow_transaction.due_date else False
+
+    if is_late and borrow_transaction.due_date:
+        existing_fine = db.query(models.Fine).filter(
+            models.Fine.transaction_id == borrow_transaction.id,
+            models.Fine.fine_type == models.FineType.LATE
+        ).first()
+        if not existing_fine:
+            setting = db.query(models.Setting).filter_by(key="late_fee_rate").first()
+            rate = float(setting.value) if setting else 1000.0
+            days_late = max(1, (datetime.utcnow() - borrow_transaction.due_date).days)
+            db.add(models.Fine(
+                member_id=member.id,
+                book_id=book.id,
+                transaction_id=borrow_transaction.id,
+                fine_type=models.FineType.LATE,
+                amount=days_late * rate,
+                reason=f"Terlambat {days_late} hari",
+            ))
+            db.commit()
+
     return {
         "message": "Book returned successfully",
         "transaction_id": return_transaction.id,
@@ -150,7 +230,7 @@ def get_active_borrows(
     
     result = []
     for transaction in active_borrows:
-        is_overdue = datetime.now(timezone.utc) > transaction.due_date if transaction.due_date else False
+        is_overdue = datetime.utcnow() > transaction.due_date if transaction.due_date else False
         
         result.append({
             "transaction_id": transaction.id,

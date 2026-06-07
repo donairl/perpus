@@ -318,3 +318,50 @@
   font-size: 14px;
   opacity: 0.9;
 }
+
+.borrower-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.borrower-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.borrower-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.borrower-name {
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.borrower-meta {
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.overdue-label {
+  color: #c53030;
+  font-weight: 600;
+}

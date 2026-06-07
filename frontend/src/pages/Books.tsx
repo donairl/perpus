@@ -10,20 +10,12 @@ type Book = api.Book
 function Books() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [books, setBooks] = useState<Book[]>([
-    { id: 1, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', isbn: '9780743273565', category: 'Fiction', status: 'available', copies: 3 },
-    { id: 2, title: '1984', author: 'George Orwell', isbn: '9780451524935', category: 'Fiction', status: 'borrowed', copies: 2 },
-    { id: 3, title: 'To Kill a Mockingbird', author: 'Harper Lee', isbn: '9780061120084', category: 'Fiction', status: 'available', copies: 4 },
-    { id: 4, title: 'Pride and Prejudice', author: 'Jane Austen', isbn: '9780141439518', category: 'Romance', status: 'available', copies: 2 },
-    { id: 5, title: 'The Catcher in the Rye', author: 'J.D. Salinger', isbn: '9780316769488', category: 'Fiction', status: 'reserved', copies: 1 },
-    { id: 6, title: 'Harry Potter', author: 'J.K. Rowling', isbn: '9780439708180', category: 'Fantasy', status: 'available', copies: 5 },
-    { id: 7, title: 'The Hobbit', author: 'J.R.R. Tolkien', isbn: '9780547928227', category: 'Fantasy', status: 'borrowed', copies: 3 },
-    { id: 8, title: 'Sapiens', author: 'Yuval Noah Harari', isbn: '9780062316097', category: 'Non-Fiction', status: 'available', copies: 2 },
-  ])
+  const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [showBorrowModal, setShowBorrowModal] = useState(false)
   const [showReturnModal, setShowReturnModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [categoryList, setCategoryList] = useState<api.Category[]>([])
 
   const loadBooks = async () => {
     try {
@@ -38,6 +30,7 @@ function Books() {
 
   useEffect(() => {
     loadBooks()
+    api.getCategories().then(setCategoryList).catch(console.error)
   }, [])
 
   const handleAddBook = async (newBook: api.NewBookRequest) => {
@@ -98,9 +91,6 @@ function Books() {
     setShowReturnModal(true)
   }
 
-  const categoryOptions = Array.from(new Set(books.map(book => book.category).filter(Boolean)))
-  const categories = ['all', ...categoryOptions]
-
   const filteredBooks = books.filter(book => {
     const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -140,13 +130,19 @@ function Books() {
         </div>
 
         <div className="category-filters">
-          {categories.map(category => (
+          <button
+            className={`category-button ${selectedCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('all')}
+          >
+            All
+          </button>
+          {categoryList.map(cat => (
             <button
-              key={category}
-              className={`category-button ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(category)}
+              key={cat.id}
+              className={`category-button ${selectedCategory === cat.name ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(cat.name)}
             >
-              {category.charAt(0).toUpperCase() + category.slice(1)}
+              {cat.name}
             </button>
           ))}
         </div>
@@ -229,7 +225,7 @@ function Books() {
         <AddBookModal
           onClose={() => setShowAddModal(false)}
           onCreate={handleAddBook}
-          categories={categoryOptions}
+          categories={categoryList}
         />
       )}
     </div>

@@ -6,192 +6,186 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from app.database import SessionLocal, engine
-from app.models import Base, Book, Member, User, BookStatus, MembershipType, MemberStatus, Transaction, TransactionType
+from app.models import Base, Book, Category, Member, User, BookStatus, MembershipType, MemberStatus
+from app.models import Transaction, TransactionType, Fine, FineType, FineStatus, Setting
 from app.auth import get_password_hash
 from datetime import datetime, timedelta
-import random
 
-def seed_database():
-    """Seed the database with sample data for development and testing."""
-
-    # Create tables
+def seed_database(force=False):
     Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
-
     try:
-        # Check if data already exists
-        if db.query(Book).count() > 0:
-            print("Database already seeded!")
+        if not force and db.query(Book).count() > 0:
+            print("Database already seeded. Use force=True or pass --force to reseed.")
             return
 
-        print("Seeding database with sample data...")
+        # Clear existing data
+        db.query(Fine).delete()
+        db.query(Transaction).delete()
+        db.query(Book).delete()
+        db.query(Category).delete()
+        db.query(Member).delete()
+        db.query(User).delete()
+        db.query(Setting).delete()
+        db.commit()
 
-        # Create admin user
-        admin = User(
-            username="admin",
-            email="admin@perpus.com",
-            hashed_password=get_password_hash("admin123")
-        )
-        db.add(admin)
+        print("Seeding database...")
 
-        # Create librarian user
-        librarian = User(
-            username="librarian",
-            email="librarian@perpus.com",
-            hashed_password=get_password_hash("lib123")
-        )
-        db.add(librarian)
+        # Settings
+        db.add_all([
+            Setting(key="late_fee_rate", value="1000", label="Denda per hari keterlambatan (Rp)"),
+            Setting(key="max_borrow_days", value="14", label="Maksimal hari peminjaman"),
+            Setting(key="max_borrow_books", value="3", label="Maksimal buku dipinjam sekaligus"),
+        ])
 
-        # Create comprehensive sample books
+        # Users
+        db.add_all([
+            User(username="admin", email="admin@perpus.id", hashed_password=get_password_hash("admin123")),
+            User(username="petugas", email="petugas@perpus.id", hashed_password=get_password_hash("petugas123")),
+        ])
+
+        # Categories
+        cats_data = [
+            ("Fiksi", "Novel, cerpen, dan karya fiksi lainnya"),
+            ("Sains & Teknologi", "Buku ilmu pengetahuan dan teknologi"),
+            ("Sejarah", "Sejarah Indonesia dan dunia"),
+            ("Pendidikan", "Buku pelajaran dan referensi akademik"),
+            ("Bisnis & Ekonomi", "Manajemen, keuangan, kewirausahaan"),
+            ("Kesehatan", "Medis, nutrisi, dan gaya hidup sehat"),
+            ("Seni & Budaya", "Seni, musik, film, dan budaya"),
+            ("Agama", "Buku keagamaan dan spiritualitas"),
+        ]
+        cat_objs = [Category(name=n, description=d) for n, d in cats_data]
+        db.add_all(cat_objs)
+        db.commit()
+        cat_map = {c.name: c.id for c in db.query(Category).all()}
+
+        # Books
         books_data = [
-            # Fiction
-            {"title": "The Great Gatsby", "author": "F. Scott Fitzgerald", "isbn": "9780743273565", "category": "Fiction", "copies": 3},
-            {"title": "1984", "author": "George Orwell", "isbn": "9780451524935", "category": "Fiction", "copies": 2},
-            {"title": "To Kill a Mockingbird", "author": "Harper Lee", "isbn": "9780061120084", "category": "Fiction", "copies": 4},
-            {"title": "The Catcher in the Rye", "author": "J.D. Salinger", "isbn": "9780316769488", "category": "Fiction", "copies": 1},
-            {"title": "One Hundred Years of Solitude", "author": "Gabriel García Márquez", "isbn": "9780060883287", "category": "Fiction", "copies": 2},
-            {"title": "The Brothers Karamazov", "author": "Fyodor Dostoevsky", "isbn": "9780374528379", "category": "Fiction", "copies": 1},
-
-            # Fantasy
-            {"title": "Harry Potter and the Philosopher's Stone", "author": "J.K. Rowling", "isbn": "9780439708180", "category": "Fantasy", "copies": 5},
-            {"title": "The Hobbit", "author": "J.R.R. Tolkien", "isbn": "9780547928227", "category": "Fantasy", "copies": 3},
-            {"title": "The Name of the Wind", "author": "Patrick Rothfuss", "isbn": "9780756404079", "category": "Fantasy", "copies": 2},
-            {"title": "A Court of Thorns and Roses", "author": "Sarah J. Maas", "isbn": "9781619634442", "category": "Fantasy", "copies": 3},
-
-            # Romance
-            {"title": "Pride and Prejudice", "author": "Jane Austen", "isbn": "9780141439518", "category": "Romance", "copies": 2},
-            {"title": "The Notebook", "author": "Nicholas Sparks", "isbn": "9780446605236", "category": "Romance", "copies": 4},
-            {"title": "Outlander", "author": "Diana Gabaldon", "isbn": "9780440212560", "category": "Romance", "copies": 2},
-
-            # Science Fiction
-            {"title": "Dune", "author": "Frank Herbert", "isbn": "9780441013593", "category": "Science Fiction", "copies": 3},
-            {"title": "Neuromancer", "author": "William Gibson", "isbn": "9780441569595", "category": "Science Fiction", "copies": 2},
-            {"title": "The Three-Body Problem", "author": "Cixin Liu", "isbn": "9780765382030", "category": "Science Fiction", "copies": 1},
-
-            # Non-Fiction
-            {"title": "Sapiens", "author": "Yuval Noah Harari", "isbn": "9780062316097", "category": "Non-Fiction", "copies": 2},
-            {"title": "Educated", "author": "Tara Westover", "isbn": "9780399590504", "category": "Non-Fiction", "copies": 3},
-            {"title": "Atomic Habits", "author": "James Clear", "isbn": "9780735211292", "category": "Non-Fiction", "copies": 4},
-            {"title": "Thinking, Fast and Slow", "author": "Daniel Kahneman", "isbn": "9780374533557", "category": "Non-Fiction", "copies": 2},
-
-            # Mystery/Thriller
-            {"title": "The Girl with the Dragon Tattoo", "author": "Stieg Larsson", "isbn": "9780307949486", "category": "Mystery", "copies": 3},
-            {"title": "Gone Girl", "author": "Gillian Flynn", "isbn": "9780307588371", "category": "Thriller", "copies": 4},
-            {"title": "The Silent Patient", "author": "Alex Michaelides", "isbn": "9781250301697", "category": "Thriller", "copies": 2},
+            ("Laskar Pelangi", "Andrea Hirata", "978-979-1234-01-1", "Fiksi", 3),
+            ("Bumi Manusia", "Pramoedya Ananta Toer", "978-979-1234-02-2", "Fiksi", 2),
+            ("Perahu Kertas", "Dee Lestari", "978-979-1234-03-3", "Fiksi", 2),
+            ("5 Cm", "Donny Dhirgantoro", "978-979-1234-04-4", "Fiksi", 2),
+            ("Ronggeng Dukuh Paruk", "Ahmad Tohari", "978-979-1234-05-5", "Fiksi", 1),
+            ("Sapiens: Riwayat Singkat Umat Manusia", "Yuval Noah Harari", "978-979-1234-06-6", "Sains & Teknologi", 2),
+            ("A Brief History of Time", "Stephen Hawking", "978-979-1234-07-7", "Sains & Teknologi", 1),
+            ("Clean Code", "Robert C. Martin", "978-979-1234-08-8", "Sains & Teknologi", 3),
+            ("The Pragmatic Programmer", "David Thomas", "978-979-1234-09-9", "Sains & Teknologi", 2),
+            ("Indonesia Dalam Arus Sejarah", "Taufik Abdullah", "978-979-1234-10-0", "Sejarah", 2),
+            ("Runtuhnya Kerajaan Hindu-Jawa", "Slamet Muljana", "978-979-1234-11-1", "Sejarah", 1),
+            ("Matematika Dasar untuk Perguruan Tinggi", "B.K. Noormandiri", "978-979-1234-12-2", "Pendidikan", 4),
+            ("Fisika Universitas", "Hugh D. Young", "978-979-1234-13-3", "Pendidikan", 3),
+            ("Rich Dad Poor Dad", "Robert T. Kiyosaki", "978-979-1234-14-4", "Bisnis & Ekonomi", 2),
+            ("Zero to One", "Peter Thiel", "978-979-1234-15-5", "Bisnis & Ekonomi", 1),
+            ("The Lean Startup", "Eric Ries", "978-979-1234-16-6", "Bisnis & Ekonomi", 2),
+            ("Why We Sleep", "Matthew Walker", "978-979-1234-17-7", "Kesehatan", 1),
+            ("Atomic Habits", "James Clear", "978-979-1234-18-8", "Kesehatan", 3),
+            ("Filosofi Teras", "Henry Manampiring", "978-979-1234-19-9", "Seni & Budaya", 2),
+            ("Dalam Dekapan Ukhuwah", "Salim A. Fillah", "978-979-1234-20-6", "Agama", 2),
         ]
+        book_objs = []
+        for title, author, isbn, cat_name, copies in books_data:
+            book_objs.append(Book(
+                title=title, author=author, isbn=isbn,
+                category_id=cat_map.get(cat_name),
+                status=BookStatus.AVAILABLE, copies=copies,
+            ))
+        db.add_all(book_objs)
+        db.commit()
+        books = db.query(Book).all()
 
-        # Create books first
-        books = []
-        borrowed_indices = []  # Track which books are borrowed for transactions
-
-        for i, book_data in enumerate(books_data):
-            # Randomly assign some books as borrowed or reserved
-            status = BookStatus.AVAILABLE
-            if random.random() < 0.15:  # 15% chance
-                status = BookStatus.BORROWED
-                borrowed_indices.append(i)
-            elif random.random() < 0.05:  # 5% chance for reserved
-                status = BookStatus.RESERVED
-
-            book = Book(
-                title=book_data["title"],
-                author=book_data["author"],
-                isbn=book_data["isbn"],
-                category=book_data["category"],
-                status=status,
-                copies=book_data["copies"]
-            )
-            books.append(book)
-            db.add(book)
-
-        # Create members
+        # Members
         members_data = [
-            {"name": "John Doe", "email": "john@example.com", "phone": "(555) 123-4567", "type": MembershipType.PREMIUM, "join_days": 350, "books": 3},
-            {"name": "Jane Smith", "email": "jane@example.com", "phone": "(555) 234-5678", "type": MembershipType.VIP, "join_days": 315, "books": 5},
-            {"name": "Bob Johnson", "email": "bob@example.com", "phone": "(555) 345-6789", "type": MembershipType.BASIC, "join_days": 266, "books": 1},
-            {"name": "Alice Williams", "email": "alice@example.com", "phone": "(555) 456-7890", "type": MembershipType.PREMIUM, "join_days": 240, "books": 2},
-            {"name": "Charlie Brown", "email": "charlie@example.com", "phone": "(555) 567-8901", "type": MembershipType.BASIC, "join_days": 395, "books": 0},
-            {"name": "Diana Prince", "email": "diana@example.com", "phone": "(555) 678-9012", "type": MembershipType.VIP, "join_days": 213, "books": 4},
-            {"name": "Michael Chen", "email": "michael@example.com", "phone": "(555) 789-0123", "type": MembershipType.PREMIUM, "join_days": 180, "books": 2},
-            {"name": "Sarah Wilson", "email": "sarah@example.com", "phone": "(555) 890-1234", "type": MembershipType.BASIC, "join_days": 95, "books": 1},
-            {"name": "David Rodriguez", "email": "david@example.com", "phone": "(555) 901-2345", "type": MembershipType.VIP, "join_days": 150, "books": 6},
-            {"name": "Emma Thompson", "email": "emma@example.com", "phone": "(555) 012-3456", "type": MembershipType.PREMIUM, "join_days": 75, "books": 3},
-            {"name": "Alex Johnson", "email": "alex@example.com", "phone": "(555) 111-2222", "type": MembershipType.BASIC, "join_days": 30, "books": 0},
-            {"name": "Maria Garcia", "email": "maria@example.com", "phone": "(555) 222-3333", "type": MembershipType.PREMIUM, "join_days": 200, "books": 4},
+            ("Budi Santoso", "budi.santoso@email.com", "081234567801", MembershipType.BASIC, MemberStatus.ACTIVE),
+            ("Siti Rahayu", "siti.rahayu@email.com", "081234567802", MembershipType.PREMIUM, MemberStatus.ACTIVE),
+            ("Andi Wijaya", "andi.wijaya@email.com", "081234567803", MembershipType.BASIC, MemberStatus.ACTIVE),
+            ("Dewi Kurniawati", "dewi.kurnia@email.com", "081234567804", MembershipType.VIP, MemberStatus.ACTIVE),
+            ("Riko Pratama", "riko.pratama@email.com", "081234567805", MembershipType.BASIC, MemberStatus.ACTIVE),
+            ("Fira Nuraini", "fira.nuraini@email.com", "081234567806", MembershipType.PREMIUM, MemberStatus.ACTIVE),
+            ("Yoga Setiawan", "yoga.setiawan@email.com", "081234567807", MembershipType.BASIC, MemberStatus.ACTIVE),
+            ("Maya Indah", "maya.indah@email.com", "081234567808", MembershipType.BASIC, MemberStatus.ACTIVE),
+            ("Hendra Kusuma", "hendra.kusuma@email.com", "081234567809", MembershipType.BASIC, MemberStatus.INACTIVE),
+            ("Laila Fitri", "laila.fitri@email.com", "081234567810", MembershipType.PREMIUM, MemberStatus.ACTIVE),
         ]
+        member_objs = [Member(name=n, email=e, phone=p, membership_type=mt, status=ms, books_count=0)
+                       for n, e, p, mt, ms in members_data]
+        db.add_all(member_objs)
+        db.commit()
+        members = db.query(Member).all()
 
-        members = []
-        for member_data in members_data:
-            # Randomly make some members inactive or expired
-            status = MemberStatus.ACTIVE
-            if random.random() < 0.1:  # 10% chance
-                status = MemberStatus.INACTIVE
-            elif random.random() < 0.05 and member_data["join_days"] > 365:  # 5% chance for old members
-                status = MemberStatus.EXPIRED
+        now = datetime.utcnow()
 
-            member = Member(
-                name=member_data["name"],
-                email=member_data["email"],
-                phone=member_data["phone"],
-                membership_type=member_data["type"],
-                status=status,
-                books_count=member_data["books"],
-                join_date=datetime.now() - timedelta(days=member_data["join_days"])
+        def add_borrow(book, member, days_ago, due_days=14):
+            t = Transaction(
+                book_id=book.id, member_id=member.id,
+                transaction_type=TransactionType.BORROW,
+                transaction_date=now - timedelta(days=days_ago),
+                due_date=now - timedelta(days=days_ago) + timedelta(days=due_days),
             )
-            members.append(member)
-            db.add(member)
+            db.add(t); db.flush()
+            return t
 
-        # Commit books and members first to get IDs
+        def add_return(book, member, days_ago, borrow_tx):
+            t = Transaction(
+                book_id=book.id, member_id=member.id,
+                transaction_type=TransactionType.RETURN,
+                transaction_date=now - timedelta(days=days_ago),
+                due_date=borrow_tx.due_date,
+                return_date=now - timedelta(days=days_ago),
+            )
+            db.add(t); db.flush()
+            return t
+
+        # Budi: borrow Laskar Pelangi 20 days ago, returned 5 days ago (1 day late), fine paid
+        b1 = add_borrow(books[0], members[0], days_ago=20, due_days=14)
+        add_return(books[0], members[0], days_ago=5, borrow_tx=b1)
+        db.add(Fine(member_id=members[0].id, book_id=books[0].id, transaction_id=b1.id,
+                    fine_type=FineType.LATE, amount=1000, status=FineStatus.PAID,
+                    reason="Terlambat 1 hari", paid_at=now - timedelta(days=4)))
+
+        # Siti: currently borrowing Bumi Manusia (10 days, not yet due)
+        add_borrow(books[1], members[1], days_ago=10, due_days=14)
+        books[1].status = BookStatus.BORROWED
+
+        # Andi: borrow Clean Code 30 days ago, overdue, unpaid fine
+        b3 = add_borrow(books[7], members[2], days_ago=30, due_days=14)
+        books[7].status = BookStatus.BORROWED
+        db.add(Fine(member_id=members[2].id, book_id=books[7].id, transaction_id=b3.id,
+                    fine_type=FineType.LATE, amount=16000, status=FineStatus.UNPAID,
+                    reason="Terlambat 16 hari"))
+
+        # Dewi: borrow Atomic Habits, returned on time
+        b4 = add_borrow(books[17], members[3], days_ago=15, due_days=14)
+        add_return(books[17], members[3], days_ago=1, borrow_tx=b4)
+
+        # Riko: lost Rich Dad Poor Dad, unpaid fine
+        b5 = add_borrow(books[13], members[4], days_ago=25, due_days=14)
+        books[13].status = BookStatus.BORROWED
+        db.add(Fine(member_id=members[4].id, book_id=books[13].id, transaction_id=b5.id,
+                    fine_type=FineType.LOST, amount=150000, status=FineStatus.UNPAID,
+                    reason="Buku dilaporkan hilang"))
+
+        # Fira: currently borrowing Filosofi Teras (3 days ago)
+        add_borrow(books[18], members[5], days_ago=3, due_days=14)
+        books[18].status = BookStatus.BORROWED
+
+        # Yoga: returned Perahu Kertas on time
+        b7 = add_borrow(books[2], members[6], days_ago=18, due_days=14)
+        add_return(books[2], members[6], days_ago=4, borrow_tx=b7)
+
         db.commit()
 
-        # Create transactions for borrowed books
-        transactions = []
-
-        for i, book_index in enumerate(borrowed_indices):
-            if i < len(members):
-                book = books[book_index]
-                member = members[i % len(members)]
-
-                # Create borrow transaction
-                borrow_transaction = Transaction(
-                    book_id=book.id,
-                    member_id=member.id,
-                    transaction_type=TransactionType.BORROW,
-                    transaction_date=datetime.now() - timedelta(days=random.randint(1, 30)),
-                    due_date=datetime.now() + timedelta(days=random.randint(1, 14))
-                )
-                transactions.append(borrow_transaction)
-                db.add(borrow_transaction)
-
-                # 30% chance of having a return transaction
-                if random.random() < 0.3:
-                    return_transaction = Transaction(
-                        book_id=book.id,
-                        member_id=member.id,
-                        transaction_type=TransactionType.RETURN,
-                        transaction_date=datetime.now() - timedelta(days=random.randint(0, 7)),
-                        return_date=datetime.now() - timedelta(days=random.randint(0, 7))
-                    )
-                    transactions.append(return_transaction)
-                    db.add(return_transaction)
-
-        db.commit()
-        print("✅ Database seeded successfully!")
-        print(f"📚 Created {len(books)} books across {len(set(b['category'] for b in books_data))} categories")
-        print(f"👥 Created {len(members)} members with various membership types")
-        print(f"🔄 Created {len(transactions)} transactions")
-        print("\n🔐 Admin credentials:")
-        print("   Username: 'admin', Password: 'admin123'")
-        print("   Username: 'librarian', Password: 'lib123'")
-        print("\n📖 Sample data includes borrowed and reserved books for testing")
+        print(f"Seeded: {len(cats_data)} categories, {len(books_data)} books, {len(members_data)} members")
+        print("Transactions and fines seeded with realistic scenarios.")
+        print("Login: admin / admin123  |  petugas / petugas123")
 
     except Exception as e:
-        print(f"❌ Error seeding database: {e}")
+        print(f"Error: {e}")
         db.rollback()
         raise
     finally:
         db.close()
 
 if __name__ == "__main__":
-    seed_database()
+    import sys as _sys
+    seed_database(force="--force" in _sys.argv)

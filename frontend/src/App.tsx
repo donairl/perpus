@@ -5,6 +5,11 @@ import Dashboard from './pages/Dashboard'
 import Books from './pages/Books'
 import Membership from './pages/Membership'
 import Reports from './pages/Reports'
+import OverdueReport from './pages/OverdueReport'
+import Borrow from './pages/Borrow'
+import Fines from './pages/Fines'
+import Categories from './pages/Categories'
+import Settings from './pages/Settings'
 import Layout from './components/Layout'
 import { getAuthToken, clearAuthToken, checkAuthStatus } from './services/api'
 
@@ -82,8 +87,13 @@ function App() {
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="books" element={<Books />} />
+          <Route path="borrow" element={<Borrow />} />
           <Route path="membership" element={<Membership />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="overdue" element={<OverdueReport />} />
+          <Route path="fines" element={<Fines />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>

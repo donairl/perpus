@@ -1,0 +1,238 @@
+.fines-page {
+  padding: 32px;
+}
+
+.fines-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.fines-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.add-fine-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-fine-btn:hover { opacity: 0.9; }
+
+.fine-summary-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 20px 28px;
+  min-width: 180px;
+  border-left: 4px solid #e2e8f0;
+}
+
+.summary-unpaid { border-left-color: #e53e3e; }
+.summary-paid { border-left-color: #38a169; }
+
+.summary-count {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.summary-label {
+  font-size: 0.8rem;
+  color: #718096;
+  margin: 2px 0 4px;
+}
+
+.summary-amount {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.fines-error {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #c53030;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.fine-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.fine-tab {
+  padding: 6px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: white;
+  font-size: 0.8rem;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fine-tab.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+}
+
+.fine-table-wrap {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 0;
+  overflow-x: auto;
+}
+
+.fines-empty {
+  text-align: center;
+  color: #a0aec0;
+  padding: 40px;
+}
+
+.fine-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.fine-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: #f7fafc;
+  color: #718096;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fine-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #2d3748;
+  vertical-align: middle;
+}
+
+.fine-table tr:last-child td { border-bottom: none; }
+
+.cell-primary { font-weight: 500; }
+.cell-secondary { color: #718096; font-size: 0.8rem; }
+
+.fine-type-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.fine-type-late { background: #fef3c7; color: #92400e; }
+.fine-type-lost { background: #fee2e2; color: #991b1b; }
+.fine-type-damage { background: #ede9fe; color: #5b21b6; }
+
+.fine-amount { font-weight: 700; color: #1a202c; }
+
+.fine-status-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.fine-status-badge.unpaid { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+.fine-status-badge.paid { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+
+.pay-btn {
+  padding: 5px 12px;
+  background: #38a169;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.pay-btn:not(:disabled):hover { opacity: 0.85; }
+
+.paid-date { font-size: 0.75rem; color: #718096; }
+
+/* Modal reuse from BorrowBookModal.css */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white; border-radius: 12px;
+  width: 90%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+}
+
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 24px; border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 { font-size: 1.25rem; color: #1a202c; margin: 0; }
+
+.close-button {
+  background: none; border: none; font-size: 1.5rem;
+  color: #718096; cursor: pointer; line-height: 1;
+}
+
+.modal-body { padding: 24px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #2d3748; margin-bottom: 6px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 0.9rem; outline: none; box-sizing: border-box;
+}
+.form-group input:focus, .form-group select:focus { border-color: #667eea; }
+
+.error-message {
+  background: #fff5f5; color: #c53030; padding: 10px 14px;
+  border-radius: 6px; font-size: 0.875rem; margin-bottom: 12px;
+  border: 1px solid #fed7d7;
+}
+
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+.button-secondary {
+  padding: 10px 20px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: white; color: #4a5568; font-size: 0.875rem; cursor: pointer;
+}
+
+.button-primary {
+  padding: 10px 20px; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white; font-size: 0.875rem; font-weight: 600; cursor: pointer;
+}
+
+.button-primary:disabled { opacity: 0.6; cursor: not-allowed; }
