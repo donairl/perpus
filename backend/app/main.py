@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import auth, books, members, transactions
+from app.routers import auth, books, members, transactions, reports
 from app.config import settings
 
 # Create database tables
@@ -23,6 +23,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(books.router, prefix="/api/books", tags=["books"])
 app.include_router(members.router, prefix="/api/members", tags=["members"])
 app.include_router(transactions.router, prefix="/api/transactions", tags=["transactions"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
 @app.get("/")
 async def root():

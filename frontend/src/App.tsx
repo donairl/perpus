@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Books from './pages/Books'
 import Membership from './pages/Membership'
+import Reports from './pages/Reports'
 import Layout from './components/Layout'
 import { getAuthToken, clearAuthToken, checkAuthStatus } from './services/api'
 
@@ -82,6 +83,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="books" element={<Books />} />
           <Route path="membership" element={<Membership />} />
+          <Route path="reports" element={<Reports />} />
         </Route>
       </Routes>
     </Router>

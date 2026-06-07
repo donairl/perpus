@@ -329,3 +329,53 @@ export const checkAuthStatus = async (): Promise<boolean> => {
     return false
   }
 }
+
+export interface TopBook {
+  book_id: number
+  title: string
+  author: string
+  category: string
+  borrow_count: number
+}
+
+export interface TopMember {
+  member_id: number
+  name: string
+  email: string
+  membership_type: string
+  borrow_count: number
+}
+
+export const getTopBooks = async (params?: {
+  start_date?: string
+  end_date?: string
+  limit?: number
+}): Promise<TopBook[]> => {
+  const queryParams = new URLSearchParams()
+  if (params?.start_date) queryParams.append('start_date', params.start_date)
+  if (params?.end_date) queryParams.append('end_date', params.end_date)
+  if (params?.limit) queryParams.append('limit', params.limit.toString())
+
+  const response = await fetch(`${API_BASE_URL}/api/reports/top-books?${queryParams}`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
+
+export const getTopMembers = async (params?: {
+  start_date?: string
+  end_date?: string
+  limit?: number
+}): Promise<TopMember[]> => {
+  const queryParams = new URLSearchParams()
+  if (params?.start_date) queryParams.append('start_date', params.start_date)
+  if (params?.end_date) queryParams.append('end_date', params.end_date)
+  if (params?.limit) queryParams.append('limit', params.limit.toString())
+
+  const response = await fetch(`${API_BASE_URL}/api/reports/top-members?${queryParams}`, {
+    headers: getHeaders(),
+  })
+  await handleApiResponse(response)
+  return response.json()
+}
